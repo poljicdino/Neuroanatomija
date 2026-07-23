@@ -298,6 +298,13 @@
   }
   .table-tool-btn:hover{border-color:var(--prussian-soft);color:var(--prussian);}
   .table-tool-btn.danger:hover{border-color:var(--rust);color:var(--rust);}
+  .paste-toast{
+    position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);
+    background:var(--prussian);color:#fff;font-family:var(--font-body);font-size:12.5px;font-weight:500;
+    padding:9px 16px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.22);
+    opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:9999;letter-spacing:.01em;
+  }
+  .paste-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
   .edit-hint{font-family:var(--font-body);font-size:12px;color:var(--ink-soft);margin:8px 0 0;line-height:1.5;}
   .edit-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
   .edit-actions button{
@@ -583,7 +590,7 @@
       <button class="table-tool-btn danger" type="button" data-tcmd="del-col">− Kolona</button>
     </div>
     <div class="answer-edit-area" id="answerEditArea" contenteditable="true"></div>
-    <p class="edit-hint">Označi tekst pa klikni dugme za formatiranje. Enter pravi novi pasus.</p>
+    <p class="edit-hint">Označi tekst pa klikni dugme za formatiranje. Enter pravi novi pasus. Zalijepljeni tekst (npr. iz Worda) se automatski čisti i uklapa u stil stranice.</p>
     <div class="edit-actions">
       <button class="edit-save-btn" id="editSaveBtn" type="button">Sačuvaj</button>
       <button id="editCancelBtn" type="button">Otkaži</button>
@@ -1520,6 +1527,188 @@ function clearFormatting(area){
   block.parentNode.replaceChild(p, block);
 }
 
+// ---------- automatsko čišćenje zalijepljenog sadržaja (Word / Google Docs / web) ----------
+function showPasteToast(msg){
+  let t = document.getElementById('pasteToast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'pasteToast';
+    t.className = 'paste-toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._hideTimer);
+  t._hideTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+function sanitizePastedFragment(root){
+  // 1) makni cijele tagove koji nikad ne nose korisni sadržaj
+  root.querySelectorAll('script,style,meta,link,object,embed,iframe,xml,svg,img[src^="file:"]').forEach(el=>el.remove());
+
+  // 2) makni HTML komentare (Word ih koristi za <!--[if ...]--> uslovne blokove)
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT, null);
+  const comments = [];
+  let cn;
+  while((cn = walker.nextNode())) comments.push(cn);
+  comments.forEach(c=>c.remove());
+
+  const allowed = new Set(['P','B','STRONG','I','EM','UL','OL','LI','TABLE','THEAD','TBODY','TR','TD','TH','BLOCKQUOTE','BR','A']);
+
+  // 3) font -> span (privremeno neutralan wrapper, raspakuje se u guard-loopu ispod)
+  root.querySelectorAll('font').forEach(el=>{
+    const span = document.createElement('span');
+    span.innerHTML = el.innerHTML;
+    el.replaceWith(span);
+  });
+
+  // 4) div -> p SAMO ako div ne sadrži block-level djecu (ul/ol/table/p/blockquote/div/naslove);
+  // ako sadrži, prosto ga raspakuj da ne ugnijezdimo blokove u <p> (nevalidan HTML koji baguje render)
+  const blockChildSelector = 'ul,ol,table,p,blockquote,div,h1,h2,h3,h4,h5,h6';
+  let divGuard = 0;
+  while(divGuard < 8){
+    const divs = root.querySelectorAll('div');
+    if(!divs.length) break;
+    divs.forEach(el=>{
+      if(el.querySelector(blockChildSelector)){
+        el.replaceWith(...el.childNodes);
+      }else{
+        const p = document.createElement('p');
+        p.innerHTML = el.innerHTML;
+        el.replaceWith(p);
+      }
+    });
+    divGuard++;
+  }
+
+  // 5) mapiraj Word-ove naslove (h1-h6) na p.ans-sub (podnaslov u stilu stranice)
+  // klasu markiramo PRIJE brisanja atributa, jer se atributi brišu tek u koraku 6
+  root.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(h=>{
+    const p = document.createElement('p');
+    p.setAttribute('data-keep-class', 'ans-sub');
+    p.innerHTML = h.innerHTML;
+    h.replaceWith(p);
+  });
+
+  // 6) ukloni SVE atribute osim strukturnih (colspan/rowspan) i markera klase iz koraka 5
+  root.querySelectorAll('*').forEach(el=>{
+    const keep = {};
+    if(el.tagName === 'TD' || el.tagName === 'TH'){
+      if(el.hasAttribute('colspan')) keep.colspan = el.getAttribute('colspan');
+      if(el.hasAttribute('rowspan')) keep.rowspan = el.getAttribute('rowspan');
+    }
+    if(el.hasAttribute('data-keep-class')) keep.class = el.getAttribute('data-keep-class');
+    // pokupi atribute u niz prije brisanja (live NamedNodeMap se mijenja tokom iteracije)
+    Array.from(el.attributes).forEach(a=>el.removeAttribute(a.name));
+    Object.keys(keep).forEach(k=>el.setAttribute(k, keep[k]));
+  });
+
+  // 7) span, u, strike, sub, sup i sve ostalo neželjeno -> raspakuj (zadrži samo tekst/djecu)
+  let guard = 0;
+  while(guard < 12){
+    const stray = root.querySelectorAll(':scope *');
+    let changed = false;
+    stray.forEach(el=>{
+      if(!allowed.has(el.tagName)){
+        el.replaceWith(...el.childNodes);
+        changed = true;
+      }
+    });
+    guard++;
+    if(!changed) break;
+  }
+
+  // 8) normalizuj bold varijante na <b>
+  root.querySelectorAll('strong').forEach(el=>{
+    const b = document.createElement('b');
+    b.innerHTML = el.innerHTML;
+    el.replaceWith(b);
+  });
+  root.querySelectorAll('em').forEach(el=>{
+    const i = document.createElement('i');
+    i.innerHTML = el.innerHTML;
+    el.replaceWith(i);
+  });
+
+  // 9) ukloni prazne pasuse/likove koji ostanu iza Word-a (samo &nbsp; ili prazno)
+  root.querySelectorAll('p,li').forEach(el=>{
+    const txt = el.textContent.replace(/\u00a0/g,' ').trim();
+    if(txt === '' && !el.querySelector('table,br')) el.remove();
+  });
+
+  // 10) spoji uzastopne ul/ol istog tipa (Word često lomi liste u više <ul> blokova)
+  root.querySelectorAll('ul + ul, ol + ol').forEach(el=>{
+    const prev = el.previousElementSibling;
+    if(prev && prev.tagName === el.tagName){
+      while(el.firstChild) prev.appendChild(el.firstChild);
+      el.remove();
+    }
+  });
+
+  return root;
+}
+
+function handleAnswerPaste(e, area){
+  e.preventDefault();
+  const dt = e.clipboardData || window.clipboardData;
+  let html = dt.getData('text/html');
+  let usedPlainText = false;
+
+  const temp = document.createElement('div');
+  if(html && html.trim()){
+    temp.innerHTML = html;
+  }else{
+    // nema HTML-a (npr. čisti tekst) - napravi paragrafe po praznim linijama
+    usedPlainText = true;
+    const plain = dt.getData('text/plain') || '';
+    const parts = plain.split(/\n{2,}/).map(s=>s.trim()).filter(Boolean);
+    if(parts.length){
+      parts.forEach(part=>{
+        const p = document.createElement('p');
+        p.textContent = part.replace(/\n/g,' ');
+        temp.appendChild(p);
+      });
+    }else{
+      temp.textContent = plain;
+    }
+  }
+
+  sanitizePastedFragment(temp);
+
+  // ubaci na poziciju kursora
+  const sel = window.getSelection();
+  if(!sel.rangeCount){ area.focus(); }
+  let range = sel.rangeCount ? sel.getRangeAt(0) : null;
+  if(!range || !area.contains(range.commonAncestorContainer)){
+    range = document.createRange();
+    range.selectNodeContents(area);
+    range.collapse(false);
+  }
+  range.deleteContents();
+
+  const frag = document.createDocumentFragment();
+  let lastNode = null;
+  Array.from(temp.childNodes).forEach(n=>{
+    lastNode = frag.appendChild(n);
+  });
+  if(!frag.childNodes.length){
+    // ništa korisno nije prošlo kroz čišćenje
+    return;
+  }
+  range.insertNode(frag);
+
+  // pomjeri kursor iza ubačenog sadržaja
+  if(lastNode){
+    const newRange = document.createRange();
+    newRange.setStartAfter(lastNode);
+    newRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+  }
+
+  showPasteToast(usedPlainText ? 'Zalijepljeno kao čist tekst' : 'Zalijepljeno i očišćeno od Word/web formatiranja');
+}
+
 function resetColors(area){
   area.focus();
   const range = ensureSelectionInArea(area);
@@ -1681,6 +1870,10 @@ document.querySelectorAll('.table-tool-btn').forEach(btn=>{
 document.getElementById('answerEditArea').addEventListener('keyup', updateTableToolbar);
 document.getElementById('answerEditArea').addEventListener('mouseup', updateTableToolbar);
 document.getElementById('answerEditArea').addEventListener('click', updateTableToolbar);
+document.getElementById('answerEditArea').addEventListener('paste', (e)=>{
+  handleAnswerPaste(e, document.getElementById('answerEditArea'));
+  updateTableToolbar();
+});
 
 document.getElementById('sheetClose').addEventListener('click', closeSheets);
 document.getElementById('confirmClose').addEventListener('click', closeSheets);
