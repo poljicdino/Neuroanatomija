@@ -238,6 +238,16 @@
     margin:6px 0 12px;padding:2px 0 2px 14px;border-left:2px solid var(--line);color:var(--ink);
   }
   .sheet-answer blockquote p{margin:0 0 4px;}
+  .sheet-answer table{
+    width:100%;border-collapse:collapse;margin:0 0 14px;font-size:13.5px;
+  }
+  .sheet-answer table th,.sheet-answer table td{
+    border:1px solid var(--line) !important;padding:7px 9px;text-align:left;vertical-align:top;
+    background:var(--paper-raised) !important;color:var(--ink) !important;
+  }
+  .sheet-answer table th{
+    font-family:var(--font-display);font-weight:600;background:var(--paper) !important;
+  }
   .sheet-answer-tools{display:flex;justify-content:flex-end;margin-top:2px;}
   .edit-link-btn{
     font-family:var(--font-mono);font-size:11px;letter-spacing:.03em;color:var(--prussian-soft);
@@ -273,6 +283,21 @@
   .answer-edit-area ul,.answer-edit-area ol{margin:0 0 12px;padding-left:20px;}
   .answer-edit-area li{margin-bottom:5px;}
   .answer-edit-area blockquote{margin:6px 0 12px;padding:2px 0 2px 14px;border-left:2px solid var(--line);color:var(--ink);}
+  .answer-edit-area table{width:100%;border-collapse:collapse;margin:0 0 12px;font-size:13.5px;}
+  .answer-edit-area table th,.answer-edit-area table td{
+    border:1px solid var(--line) !important;padding:6px 8px;text-align:left;vertical-align:top;min-width:40px;
+    background:var(--paper-raised) !important;color:var(--ink) !important;
+  }
+  .answer-edit-area table th{font-family:var(--font-display);font-weight:600;background:var(--paper) !important;}
+  .answer-edit-area table td:focus,.answer-edit-area table th:focus{outline:2px solid var(--prussian);outline-offset:-2px;}
+  .table-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 8px;padding:6px 8px;background:var(--paper);border-radius:8px;border:1px solid var(--line);}
+  .table-toolbar.hidden{display:none;}
+  .table-tool-btn{
+    font-family:var(--font-mono);font-size:11px;padding:5px 9px;border-radius:7px;border:1px solid var(--line);
+    background:var(--paper-raised);color:var(--ink-soft);cursor:pointer;
+  }
+  .table-tool-btn:hover{border-color:var(--prussian-soft);color:var(--prussian);}
+  .table-tool-btn.danger:hover{border-color:var(--rust);color:var(--rust);}
   .edit-hint{font-family:var(--font-body);font-size:12px;color:var(--ink-soft);margin:8px 0 0;line-height:1.5;}
   .edit-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
   .edit-actions button{
@@ -395,6 +420,19 @@
   }
   .plan-add-to-day-btn:hover{color:var(--prussian);}
   .plan-add-to-day-btn.in-plan{color:var(--mastered);}
+  .sheet-plan-dates{
+    font-family:var(--font-mono);font-size:11.5px;color:var(--ink-soft);
+    text-transform:uppercase;letter-spacing:.04em;
+    margin:2px 0 12px;padding:8px 10px;border-radius:10px;
+    background:var(--paper-raised);border:1px solid var(--line);
+    display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  }
+  .sheet-plan-dates.is-empty{color:var(--todo);font-style:italic;text-transform:none;letter-spacing:normal;font-family:var(--font-body);}
+  .sheet-plan-dates .plan-date-chip{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.02em;
+    background:var(--mastered-bg);color:var(--mastered);
+    border-radius:6px;padding:2px 7px;white-space:nowrap;
+  }
   .plan-badge{
     font-family:var(--font-mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;
     background:var(--prussian);color:#fff;border-radius:6px;padding:2px 6px;flex-shrink:0;margin-left:6px;
@@ -433,6 +471,10 @@
     <div class="pop-sep"></div>
     <button class="pop-item" data-action="expand-all">Proširi sve sekcije</button>
     <button class="pop-item" data-action="collapse-all">Skupi sve sekcije</button>
+    <div class="pop-sep"></div>
+    <button class="pop-item" data-action="export-backup">⬇ Preuzmi backup (.json)</button>
+    <button class="pop-item" data-action="import-backup">⬆ Učitaj backup</button>
+    <input type="file" id="importBackupInput" accept="application/json" style="display:none;">
     <div class="pop-sep"></div>
     <button class="pop-item danger" data-action="reset-progress">Resetuj napredak</button>
   </div>
@@ -517,6 +559,7 @@
       <span class="dot"></span><span id="editToggleLabel">Uredi odgovor</span>
     </button>
   </div>
+  <div class="sheet-plan-dates" id="sheetPlanDates"></div>
   <div class="sheet-answer" id="sheetAnswer">—</div>
   <div class="answer-edit-wrap" id="answerEditWrap">
     <div class="edit-toolbar">
@@ -527,7 +570,17 @@
       <button class="edit-tool-btn" type="button" data-cmd="ul" title="Lista sa tačkama">• Lista</button>
       <button class="edit-tool-btn" type="button" data-cmd="ol" title="Numerisana lista">1. Lista</button>
       <span class="edit-tool-sep"></span>
+      <button class="edit-tool-btn" type="button" data-cmd="table" title="Umetni tabelu">⊞ Tabela</button>
+      <span class="edit-tool-sep"></span>
+      <button class="edit-tool-btn" type="button" data-cmd="reset-color" title="Ukloni ručno postavljenu boju teksta/pozadine (npr. zalijepljeno iz Worda) i vrati na boje teme">⟲ Boja teme</button>
+      <span class="edit-tool-sep"></span>
       <button class="edit-tool-btn" type="button" data-cmd="clear" title="Ukloni formatiranje">Očisti</button>
+    </div>
+    <div class="table-toolbar hidden" id="tableToolbar">
+      <button class="table-tool-btn" type="button" data-tcmd="add-row">+ Red</button>
+      <button class="table-tool-btn" type="button" data-tcmd="add-col">+ Kolona</button>
+      <button class="table-tool-btn danger" type="button" data-tcmd="del-row">− Red</button>
+      <button class="table-tool-btn danger" type="button" data-tcmd="del-col">− Kolona</button>
     </div>
     <div class="answer-edit-area" id="answerEditArea" contenteditable="true"></div>
     <p class="edit-hint">Označi tekst pa klikni dugme za formatiranje. Enter pravi novi pasus.</p>
@@ -790,6 +843,68 @@ async function pushToJsonBin(){
   }
 }
 
+// ---------- ručni backup (export/import u .json fajl) ----------
+function exportBackup(){
+  try{
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      app: 'neuroanatomija-pregled',
+      state: state
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = todayISO();
+    a.href = url;
+    a.download = `neuro-backup-${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setSaveNote('Backup preuzet.', false);
+  }catch(e){
+    setSaveNote('Preuzimanje backupa nije uspjelo.', true);
+  }
+}
+
+function importBackupFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      const incoming = parsed && parsed.state ? parsed.state : parsed;
+      if(!incoming || typeof incoming !== 'object'){
+        throw new Error('Neispravan format fajla.');
+      }
+      const ok = window.confirm(
+        'Ovo će zamijeniti trenutni napredak, editovane odgovore, ispite i plan za dan sadržajem iz backup fajla' +
+        (parsed && parsed.exportedAt ? ` (napravljen: ${new Date(parsed.exportedAt).toLocaleString()})` : '') +
+        '. Nastaviti?'
+      );
+      if(!ok) return;
+      applyLoadedState(incoming);
+      saveState();
+      render();
+      renderExam();
+      renderPlan();
+      setSaveNote('Backup učitan i sačuvan.', false);
+    }catch(e){
+      setSaveNote('Ovaj fajl ne izgleda kao ispravan backup.', true);
+      window.alert('Nije moguće učitati ovaj fajl kao backup: ' + e.message);
+    }
+  };
+  reader.onerror = () => {
+    setSaveNote('Čitanje fajla nije uspjelo.', true);
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('importBackupInput').addEventListener('change', (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(file) importBackupFile(file);
+  e.target.value = '';
+});
+
 function statusOf(id){ return state.progress[id] || 'todo'; }
 
 function setStatus(id, status){
@@ -908,6 +1023,26 @@ function updateSheetPlanButton(){
   label.textContent = inPlan
     ? `✓ U planu za ${formatPlanDateLabel(planSelectedDate)}`
     : `+ Dodaj u plan za ${formatPlanDateLabel(planSelectedDate)}`;
+}
+
+function getPlanDatesForQuestion(id){
+  return Object.keys(state.dayPlans)
+    .filter(dateStr => (state.dayPlans[dateStr]||[]).includes(id))
+    .sort();
+}
+
+function updateSheetPlanDates(){
+  if(activeSheetId==null) return;
+  const el = document.getElementById('sheetPlanDates');
+  const dates = getPlanDatesForQuestion(activeSheetId);
+  if(dates.length===0){
+    el.classList.add('is-empty');
+    el.innerHTML = 'Ovo pitanje nije u planu.';
+  }else{
+    el.classList.remove('is-empty');
+    const label = dates.length===1 ? 'U planu za:' : 'U planu za:';
+    el.innerHTML = label + ' ' + dates.map(d=>`<span class="plan-date-chip">${formatPlanDateLabel(d)}</span>`).join('');
+  }
 }
 
 // ---------- MOCK EXAM GENERATOR ----------
@@ -1141,6 +1276,7 @@ function renderAnswerView(q){
   const html = getEffectiveAnswer(q);
   if(html && html.trim()){
     ansEl.innerHTML = html;
+    stripTableInlineStyles(ansEl);
     ansEl.classList.remove('placeholder');
   }else{
     ansEl.textContent = 'Odgovor za ovo pitanje još nije unesen.';
@@ -1160,13 +1296,24 @@ function renderAnswerView(q){
 function closeEditMode(){
   document.getElementById('answerEditWrap').classList.remove('open');
   document.getElementById('sheetAnswer').classList.remove('editing');
+  document.getElementById('tableToolbar').classList.add('hidden');
+}
+
+function stripTableInlineStyles(area){
+  area.querySelectorAll('table, table [style]').forEach(el=>{
+    el.removeAttribute('style');
+    el.removeAttribute('bgcolor');
+    el.removeAttribute('color');
+  });
 }
 
 function openEditMode(q){
   const area = document.getElementById('answerEditArea');
   area.innerHTML = getEffectiveAnswer(q) || '<p></p>';
+  stripTableInlineStyles(area);
   document.getElementById('answerEditWrap').classList.add('open');
   document.getElementById('sheetAnswer').classList.add('editing');
+  document.getElementById('tableToolbar').classList.add('hidden');
   area.focus();
 }
 
@@ -1180,6 +1327,7 @@ function openSheet(id){
   renderAnswerView(q);
   updateSheetStatusButtons();
   updateSheetPlanButton();
+  updateSheetPlanDates();
   document.getElementById('sheet').classList.add('open');
   document.getElementById('backdrop').classList.add('open');
 }
@@ -1234,11 +1382,13 @@ document.addEventListener('click', (e)=>{
     if(ids.includes(activeSheetId)) removeFromPlan(planSelectedDate, activeSheetId);
     else addToPlan(planSelectedDate, activeSheetId);
     updateSheetPlanButton();
+    updateSheetPlanDates();
     renderPlan();
   }
   else if(action === 'plan-remove'){
     removeFromPlan(planSelectedDate, Number(t.dataset.id));
     renderPlan();
+    if(activeSheetId === Number(t.dataset.id)){ updateSheetPlanButton(); updateSheetPlanDates(); }
   }
   else if(action === 'toggle-section'){
     const key = t.dataset.key;
@@ -1256,6 +1406,14 @@ document.addEventListener('click', (e)=>{
   else if(action === 'collapse-all'){
     openKeys.clear();
     renderSections(); popover.classList.remove('open');
+  }
+  else if(action === 'export-backup'){
+    popover.classList.remove('open');
+    exportBackup();
+  }
+  else if(action === 'import-backup'){
+    popover.classList.remove('open');
+    document.getElementById('importBackupInput').click();
   }
   else if(action === 'reset-progress'){
     popover.classList.remove('open');
@@ -1362,6 +1520,130 @@ function clearFormatting(area){
   block.parentNode.replaceChild(p, block);
 }
 
+function resetColors(area){
+  area.focus();
+  const range = ensureSelectionInArea(area);
+  let scope = area;
+  if(range){
+    const block = findBlockAncestor(range.startContainer, area);
+    const cell = findTableCell(range.startContainer, area);
+    scope = cell || block || area;
+  }
+  scope.removeAttribute('style');
+  scope.removeAttribute('color');
+  scope.removeAttribute('bgcolor');
+  scope.querySelectorAll('[style],[color],[bgcolor]').forEach(el=>{
+    el.removeAttribute('style');
+    el.removeAttribute('color');
+    el.removeAttribute('bgcolor');
+  });
+  // font/span tagovi koji nose boju kroz execCommand ili paste
+  scope.querySelectorAll('font').forEach(el=>{
+    const span = document.createElement('span');
+    span.innerHTML = el.innerHTML;
+    el.replaceWith(span);
+  });
+}
+
+// ---------- tabele u editoru ----------
+function buildTable(rows, cols, withHeader){
+  const table = document.createElement('table');
+  for(let r=0;r<rows;r++){
+    const tr = document.createElement('tr');
+    for(let c=0;c<cols;c++){
+      const cell = document.createElement(withHeader && r===0 ? 'th' : 'td');
+      cell.innerHTML = '<br>';
+      tr.appendChild(cell);
+    }
+    table.appendChild(tr);
+  }
+  return table;
+}
+
+function insertTable(area){
+  area.focus();
+  const range = ensureSelectionInArea(area) || (function(){
+    // ako nema selekcije unutar area, stavi kursor na kraj
+    const r = document.createRange();
+    r.selectNodeContents(area);
+    r.collapse(false);
+    return r;
+  })();
+  const block = findBlockAncestor(range.startContainer, area);
+  const table = buildTable(3, 3, true);
+  const afterP = document.createElement('p');
+  afterP.innerHTML = '<br>';
+  if(block && area.contains(block)){
+    block.parentNode.insertBefore(table, block.nextSibling);
+    table.parentNode.insertBefore(afterP, table.nextSibling);
+  }else{
+    area.appendChild(table);
+    area.appendChild(afterP);
+  }
+  // fokusiraj prvu ćeliju
+  const firstCell = table.querySelector('th,td');
+  if(firstCell){
+    const r = document.createRange();
+    r.selectNodeContents(firstCell);
+    r.collapse(true);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+}
+
+function findTableCell(node, area){
+  let n = node;
+  while(n && n !== area){
+    if(n.nodeType === 1 && (n.tagName === 'TD' || n.tagName === 'TH')) return n;
+    n = n.parentNode;
+  }
+  return null;
+}
+
+function updateTableToolbar(){
+  const area = getEditArea();
+  const tbar = document.getElementById('tableToolbar');
+  const sel = window.getSelection();
+  if(!sel.rangeCount){ tbar.classList.add('hidden'); return; }
+  const cell = findTableCell(sel.getRangeAt(0).startContainer, area);
+  tbar.classList.toggle('hidden', !cell);
+}
+
+function tableRowColAction(action){
+  const area = getEditArea();
+  const sel = window.getSelection();
+  if(!sel.rangeCount) return;
+  const cell = findTableCell(sel.getRangeAt(0).startContainer, area);
+  if(!cell) return;
+  const row = cell.parentNode;
+  const table = row.closest('table');
+  const colIndex = Array.prototype.indexOf.call(row.children, cell);
+  const rows = Array.prototype.slice.call(table.rows);
+
+  if(action === 'add-row'){
+    const newRow = document.createElement('tr');
+    for(let i=0;i<row.children.length;i++){
+      const newCell = document.createElement('td');
+      newCell.innerHTML = '<br>';
+      newRow.appendChild(newCell);
+    }
+    row.parentNode.insertBefore(newRow, row.nextSibling);
+  }else if(action === 'del-row'){
+    if(rows.length > 1) row.remove();
+  }else if(action === 'add-col'){
+    rows.forEach(r=>{
+      const newCell = document.createElement(r.children[0] && r.children[0].tagName === 'TH' ? 'th' : 'td');
+      newCell.innerHTML = '<br>';
+      r.appendChild(newCell);
+    });
+  }else if(action === 'del-col'){
+    if(row.children.length > 1){
+      rows.forEach(r=>{ if(r.children[colIndex]) r.children[colIndex].remove(); });
+    }
+  }
+}
+
 document.querySelectorAll('.edit-tool-btn').forEach(btn=>{
   btn.addEventListener('mousedown', (e)=>{ e.preventDefault(); }); // keep selection alive
   btn.addEventListener('click', ()=>{
@@ -1378,11 +1660,27 @@ document.querySelectorAll('.edit-tool-btn').forEach(btn=>{
       toggleList(area, 'ul');
     }else if(cmd === 'ol'){
       toggleList(area, 'ol');
+    }else if(cmd === 'table'){
+      insertTable(area);
+      updateTableToolbar();
+    }else if(cmd === 'reset-color'){
+      resetColors(area);
     }else if(cmd === 'clear'){
       clearFormatting(area);
     }
   });
 });
+
+document.querySelectorAll('.table-tool-btn').forEach(btn=>{
+  btn.addEventListener('mousedown', (e)=>{ e.preventDefault(); });
+  btn.addEventListener('click', ()=>{
+    tableRowColAction(btn.dataset.tcmd);
+  });
+});
+
+document.getElementById('answerEditArea').addEventListener('keyup', updateTableToolbar);
+document.getElementById('answerEditArea').addEventListener('mouseup', updateTableToolbar);
+document.getElementById('answerEditArea').addEventListener('click', updateTableToolbar);
 
 document.getElementById('sheetClose').addEventListener('click', closeSheets);
 document.getElementById('confirmClose').addEventListener('click', closeSheets);
