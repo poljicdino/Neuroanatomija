@@ -368,8 +368,67 @@
 
   /* ---------- ZAJEDNIČKI STIL ZA NASLOVE KARTICA (Generator ispita, Plan za dan) ---------- */
   .points-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;}
+  .collapsible-head{
+    width:100%;background:none;border:none;cursor:pointer;padding:0;text-align:left;
+    font-family:inherit;
+  }
+  .collapsible-head .chevron{color:var(--ink-soft);font-size:12px;transition:transform .2s;flex-shrink:0;}
+  .collapsible-body{overflow:hidden;}
+  .rq-card.collapsed .points-card-head,
+  .exam-card.collapsed .points-card-head{margin-bottom:0;}
+  .rq-card.collapsed .collapsible-body,
+  .exam-card.collapsed .collapsible-body{display:none;}
+  .rq-card.collapsed .chevron,
+  .exam-card.collapsed .chevron{transform:rotate(-90deg);}
+  .exam-card-toolbar{display:flex;justify-content:flex-end;margin-bottom:6px;}
   .points-title{font-family:var(--font-display);font-weight:600;font-size:16.5px;color:var(--ink);}
   .points-net{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+
+  /* ---------- RANDOM QUESTION GENERATOR ---------- */
+  .rq-card{margin:14px 18px 4px;background:var(--paper-raised);border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
+  .rq-filter-group{margin-bottom:8px;}
+  .rq-filter-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 6px;}
+  .rq-chip-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
+  .rq-chip-row::-webkit-scrollbar{display:none;}
+  .rq-chip{
+    font-family:var(--font-mono);font-size:11.5px;white-space:nowrap;
+    padding:6px 11px;border-radius:20px;border:1px solid var(--line);
+    background:var(--paper);color:var(--ink-soft);cursor:pointer;
+    display:flex;align-items:center;gap:5px;transition:background .15s,color .15s,border-color .15s;
+  }
+  .rq-chip .n{opacity:.65;}
+  .rq-chip.active{background:var(--prussian);border-color:var(--prussian);color:#fff;}
+  .rq-chip.active .n{opacity:.8;}
+  .rq-generate-row{margin-top:10px;}
+  .rq-generate-btn{
+    width:100%;padding:11px;border-radius:11px;border:1px solid var(--prussian);
+    background:var(--prussian);color:#fff;font-family:var(--font-body);font-size:14px;font-weight:600;
+    cursor:pointer;transition:opacity .15s;
+  }
+  .rq-generate-btn:hover{opacity:.9;}
+  .rq-generate-btn:disabled{opacity:.5;cursor:not-allowed;}
+  .rq-result{margin-top:12px;}
+  .rq-result-card{
+    border:1px solid var(--line);border-radius:12px;background:var(--paper);padding:12px 14px;
+    cursor:pointer;transition:border-color .15s;
+  }
+  .rq-result-card:hover{border-color:var(--prussian-soft);}
+  .rq-result-meta{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--prussian-soft);margin-bottom:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .rq-result-status{
+    font-family:var(--font-mono);font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;
+    padding:1px 7px;border-radius:8px;
+  }
+  .rq-result-status.rs-todo{background:var(--todo-bg);color:var(--ink-soft);}
+  .rq-result-status.rs-review{background:var(--review-bg);color:var(--review);}
+  .rq-result-status.rs-mastered{background:var(--mastered-bg);color:var(--mastered);}
+  .rq-result-question{
+    font-family:var(--font-body);font-size:15px;line-height:1.45;color:var(--ink);font-weight:500;
+  }
+  .rq-result-hint{
+    font-family:var(--font-mono);font-size:10.5px;color:var(--ink-soft);margin-top:8px;
+    text-transform:uppercase;letter-spacing:.04em;opacity:.75;
+  }
+  .rq-empty-note{font-family:var(--font-body);font-size:13px;color:var(--ink-soft);padding:6px 2px;}
 
   /* ---------- PLAN ZA DAN ---------- */
   .plan-card{margin:14px 18px 4px;background:var(--paper-raised);border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
@@ -502,9 +561,38 @@
     </div>
   </div>
 
-  <div class="exam-card">
-    <div class="points-card-head">
+  <div class="rq-card" id="rqCard">
+    <button class="points-card-head collapsible-head" data-action="toggle-card" data-card="rqCard">
+      <span class="points-title">Nasumično pitanje</span>
+      <span class="chevron">⌄</span>
+    </button>
+    <div class="collapsible-body">
+    <div class="rq-filter-group">
+      <p class="rq-filter-label">Status</p>
+      <div class="rq-chip-row" id="rqStatusRow">
+        <button class="rq-chip active" data-rq-status="both">Oboje</button>
+        <button class="rq-chip" data-rq-status="review">Za ponoviti</button>
+        <button class="rq-chip" data-rq-status="mastered">Naučeno</button>
+      </div>
+    </div>
+    <div class="rq-filter-group">
+      <p class="rq-filter-label">Poglavlja</p>
+      <div class="rq-chip-row" id="rqChapterRow"></div>
+    </div>
+    <div class="rq-generate-row">
+      <button class="rq-generate-btn" id="rqGenerateBtn">🎲 Generiši pitanje</button>
+    </div>
+    <div class="rq-result" id="rqResult"></div>
+    </div>
+  </div>
+
+  <div class="exam-card" id="examCard">
+    <button class="points-card-head collapsible-head" data-action="toggle-card" data-card="examCard">
       <span class="points-title">Generator ispita</span>
+      <span class="chevron">⌄</span>
+    </button>
+    <div class="collapsible-body">
+    <div class="exam-card-toolbar">
       <button class="link-btn" id="newExamBtn">Novi ispit</button>
     </div>
     <div id="examBody"></div>
@@ -517,6 +605,7 @@
     <div class="exam-stat-line" id="examCoverageText">Obuhvaćeno mock ispitima: 0% (0/295)</div>
     <div class="plate-bar"><div class="plate-bar-fill" id="examCoverageBar" style="width:0%"></div></div>
     <div class="exam-stat-line" id="examPassFailText" style="margin-top:8px;">Još nema zabilježenih ispita.</div>
+    </div>
   </div>
 
   <div class="plan-card">
@@ -674,6 +763,32 @@ function toggleTheme(){
 
 loadTheme();
 
+// ---------- COLLAPSIBLE CARDS (generator ispita / nasumično pitanje) ----------
+const CARD_COLLAPSE_KEY = 'neuro-collapsed-cards';
+
+function loadCardCollapseState(){
+  if(!hasLocalStorage) return;
+  let collapsed = [];
+  try{
+    collapsed = JSON.parse(window.localStorage.getItem(CARD_COLLAPSE_KEY) || '[]');
+  }catch(e){ collapsed = []; }
+  collapsed.forEach(id=>{
+    const card = document.getElementById(id);
+    if(card) card.classList.add('collapsed');
+  });
+}
+
+function saveCardCollapseState(){
+  if(!hasLocalStorage) return;
+  const ids = ['rqCard','examCard'].filter(id=>{
+    const card = document.getElementById(id);
+    return card && card.classList.contains('collapsed');
+  });
+  try{ window.localStorage.setItem(CARD_COLLAPSE_KEY, JSON.stringify(ids)); }catch(e){}
+}
+
+loadCardCollapseState();
+
 // ====== JSONBin cloud sync (besplatno, radi na svim uređajima) ======
 // Uputstvo:
 // 1) Napravi besplatan nalog na https://jsonbin.io
@@ -708,6 +823,78 @@ let activeSheetId = null;
 const ALL_Q = {};
 let TOTAL = 0;
 DATA.forEach(sec => sec.questions.forEach(q => { ALL_Q[q.id] = { ...q, sectionKey: sec.key, sectionPlate: sec.plate, sectionTitle: sec.title }; TOTAL++; }));
+
+// ---------- RANDOM QUESTION GENERATOR ----------
+let rqStatusFilter = 'both'; // 'both' | 'review' | 'mastered'
+let rqChapterFilter = new Set(DATA.map(s=>s.key)); // set of selected chapter keys, all selected by default
+let rqCurrentId = null;
+
+function renderRqChapterChips(){
+  const row = document.getElementById('rqChapterRow');
+  const allActive = rqChapterFilter.size === DATA.length;
+  let html = `<button class="rq-chip${allActive ? ' active' : ''}" data-rq-chapter="all">Sve</button>`;
+  html += DATA.map(sec=>{
+    const active = rqChapterFilter.has(sec.key);
+    return `<button class="rq-chip${active ? ' active' : ''}" data-rq-chapter="${sec.key}">${sec.title}</button>`;
+  }).join('');
+  row.innerHTML = html;
+}
+
+function rqMatchingPool(){
+  const pool = [];
+  DATA.forEach(sec=>{
+    if(!rqChapterFilter.has(sec.key)) return;
+    sec.questions.forEach(q=>{
+      const st = statusOf(q.id);
+      if(rqStatusFilter === 'review' && st !== 'review') return;
+      if(rqStatusFilter === 'mastered' && st !== 'mastered') return;
+      if(rqStatusFilter === 'both' && st !== 'review' && st !== 'mastered') return;
+      pool.push(q.id);
+    });
+  });
+  return pool;
+}
+
+function renderRqResult(){
+  const el = document.getElementById('rqResult');
+  if(rqCurrentId == null){
+    el.innerHTML = '';
+    return;
+  }
+  const q = ALL_Q[rqCurrentId];
+  if(!q){ el.innerHTML=''; return; }
+  const st = statusOf(q.id);
+  const stLabel = st === 'mastered' ? 'Naučeno' : (st === 'review' ? 'Za ponoviti' : 'Nije rađeno');
+  el.innerHTML = `
+    <div class="rq-result-card" data-action="rq-open" data-id="${q.id}">
+      <div class="rq-result-meta">
+        <span>Tab. ${q.sectionPlate} · ${q.sectionTitle} · ${q.num}.</span>
+        <span class="rq-result-status rs-${st}">${stLabel}</span>
+      </div>
+      <div class="rq-result-question">${q.text}</div>
+      <div class="rq-result-hint">Klikni za odgovor</div>
+    </div>
+  `;
+}
+
+function generateRandomQuestion(){
+  const pool = rqMatchingPool();
+  const btn = document.getElementById('rqGenerateBtn');
+  if(pool.length === 0){
+    document.getElementById('rqResult').innerHTML = '<p class="rq-empty-note">Nema pitanja koja odgovaraju odabranim filterima.</p>';
+    rqCurrentId = null;
+    return;
+  }
+  // avoid repeating the same question twice in a row if there are other options
+  let candidates = pool;
+  if(pool.length > 1 && rqCurrentId != null){
+    const filtered = pool.filter(id=>id !== rqCurrentId);
+    if(filtered.length > 0) candidates = filtered;
+  }
+  const idx = Math.floor(Math.random()*candidates.length);
+  rqCurrentId = candidates[idx];
+  renderRqResult();
+}
 
 function normalize(s){
   return (s||'').toLowerCase()
@@ -1383,6 +1570,12 @@ document.addEventListener('click', (e)=>{
   const action = t.dataset.action;
   if(action === 'cycle'){ cycleStatus(Number(t.dataset.id)); }
   else if(action === 'open'){ openSheet(Number(t.dataset.id)); }
+  else if(action === 'rq-open'){ openSheet(Number(t.dataset.id)); }
+  else if(action === 'toggle-card'){
+    const card = document.getElementById(t.dataset.card);
+    if(card) card.classList.toggle('collapsed');
+    saveCardCollapseState();
+  }
   else if(action === 'edit-toggle'){
     if(activeSheetId==null) return;
     const isOpen = document.getElementById('answerEditWrap').classList.contains('open');
@@ -1913,6 +2106,35 @@ document.getElementById('filterRow').addEventListener('click', (e)=>{
   document.querySelectorAll('#filterRow .chip').forEach(c=>c.classList.toggle('active', c===chip));
   renderSections();
 });
+
+document.getElementById('rqStatusRow').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.rq-chip');
+  if(!chip) return;
+  rqStatusFilter = chip.dataset.rqStatus;
+  document.querySelectorAll('#rqStatusRow .rq-chip').forEach(c=>c.classList.toggle('active', c===chip));
+});
+
+document.getElementById('rqChapterRow').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.rq-chip');
+  if(!chip) return;
+  const key = chip.dataset.rqChapter;
+  if(key === 'all'){
+    rqChapterFilter = new Set(DATA.map(s=>s.key));
+  }else{
+    if(rqChapterFilter.has(key)){
+      rqChapterFilter.delete(key);
+      // ako je ostalo prazno, vrati sve (izbjegavamo prazan filter)
+      if(rqChapterFilter.size === 0) rqChapterFilter = new Set(DATA.map(s=>s.key));
+    }else{
+      rqChapterFilter.add(key);
+    }
+  }
+  renderRqChapterChips();
+});
+
+document.getElementById('rqGenerateBtn').addEventListener('click', generateRandomQuestion);
+
+renderRqChapterChips();
 
 document.getElementById('newExamBtn').addEventListener('click', generateExam);
 document.getElementById('examPassBtn').addEventListener('click', ()=>logExam('pass'));
