@@ -503,6 +503,63 @@
     font-family:var(--font-mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;
     background:var(--prussian);color:#fff;border-radius:6px;padding:2px 6px;flex-shrink:0;margin-left:6px;
   }
+
+  /* ---------- REVIEWED LAST (odvojeno od Plan za dan) ---------- */
+  .sheet-reviewed-row{
+    font-family:var(--font-mono);font-size:11.5px;color:var(--ink-soft);
+    margin:2px 0 12px;padding:8px 10px;border-radius:10px;
+    background:var(--paper-raised);border:1px solid var(--line);
+    display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  }
+  .sheet-reviewed-label{text-transform:uppercase;letter-spacing:.04em;}
+  .sheet-reviewed-value{color:var(--ink);font-weight:500;}
+  .sheet-reviewed-value.is-stale{color:var(--rust);}
+  .sheet-reviewed-value.is-empty{color:var(--todo);font-style:italic;font-family:var(--font-body);font-weight:400;}
+  .sheet-review-now-btn{
+    margin-left:auto;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.03em;text-transform:uppercase;
+    color:var(--prussian-soft);background:none;border:1px solid var(--line);border-radius:8px;
+    padding:5px 9px;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap;
+  }
+  .sheet-review-now-btn:hover{background:var(--prussian);border-color:var(--prussian);color:#fff;}
+
+  /* ---------- SPACED REPETITION / ZA OBNOVU ---------- */
+  .sr-card{margin:14px 18px 4px;background:var(--paper-raised);border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
+  .sr-card.collapsed .points-card-head{margin-bottom:0;}
+  .sr-card.collapsed .collapsible-body{display:none;}
+  .sr-card.collapsed .chevron{transform:rotate(-90deg);}
+  .sr-sub{font-family:var(--font-body);font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;line-height:1.4;}
+  .sr-threshold-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .sr-threshold-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft);}
+  .sr-threshold-select{
+    font-family:var(--font-mono);font-size:12px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);
+    background:var(--paper);color:var(--ink);
+  }
+  .sr-count-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .sr-count-text{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-soft);}
+  .sr-review-all-btn{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.03em;color:var(--prussian-soft);
+    background:none;border:none;cursor:pointer;padding:4px 2px;text-decoration:underline;text-underline-offset:2px;
+  }
+  .sr-review-all-btn:hover{color:var(--prussian);}
+  .sr-list{display:flex;flex-direction:column;max-height:420px;overflow-y:auto;}
+  .sr-row{display:flex;align-items:flex-start;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line-soft);border-left:3px solid transparent;}
+  .sr-row:last-child{border-bottom:none;}
+  .sr-row.rs-review{border-left-color:var(--review);}
+  .sr-row.rs-mastered{border-left-color:var(--mastered);}
+  .sr-row-main{flex:1;min-width:0;}
+  .sr-row-meta{font-family:var(--font-mono);font-size:10.5px;color:var(--rust);text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px;display:flex;gap:6px;flex-wrap:wrap;}
+  .sr-row-meta .sr-never{color:var(--ink-soft);}
+  .sr-row-text{
+    flex:1;background:none;border:none;text-align:left;cursor:pointer;width:100%;
+    font-family:var(--font-body);font-size:14px;line-height:1.4;color:var(--ink);padding:1px 0;
+  }
+  .sr-mark-btn{
+    flex-shrink:0;font-family:var(--font-mono);font-size:10px;letter-spacing:.03em;text-transform:uppercase;
+    color:var(--prussian-soft);background:none;border:1px solid var(--line);border-radius:8px;
+    padding:5px 8px;cursor:pointer;transition:background .15s,color .15s;align-self:center;
+  }
+  .sr-mark-btn:hover{background:var(--prussian);border-color:var(--prussian);color:#fff;}
+  .sr-empty{font-family:var(--font-body);font-size:13.5px;color:var(--ink-soft);padding:8px 2px;}
 </style>
 </head>
 <body>
@@ -608,6 +665,30 @@
     </div>
   </div>
 
+  <div class="sr-card" id="srCard">
+    <button class="points-card-head collapsible-head" data-action="toggle-card" data-card="srCard">
+      <span class="points-title">Za obnovu</span>
+      <span class="chevron">⌄</span>
+    </button>
+    <div class="collapsible-body">
+    <p class="sr-sub">Pitanja koja nisu pregledana u planu duže od odabranog broja dana (ili nikad nisu bila u planu).</p>
+    <div class="sr-threshold-row">
+      <span class="sr-threshold-label">Stalo od:</span>
+      <select class="sr-threshold-select" id="srThresholdSelect">
+        <option value="3">3+ dana</option>
+        <option value="5" selected>5+ dana</option>
+        <option value="7">7+ dana</option>
+        <option value="14">14+ dana</option>
+      </select>
+    </div>
+    <div class="sr-count-row">
+      <span class="sr-count-text" id="srCountText">0 pitanja</span>
+      <button class="sr-review-all-btn" id="srAddAllToPlanBtn">+ Dodaj sve u plan za danas</button>
+    </div>
+    <div class="sr-list" id="srList"></div>
+    </div>
+  </div>
+
   <div class="plan-card">
     <div class="points-card-head">
       <span class="points-title">Plan za dan</span>
@@ -657,6 +738,11 @@
     </button>
   </div>
   <div class="sheet-plan-dates" id="sheetPlanDates"></div>
+  <div class="sheet-reviewed-row" id="sheetReviewedRow">
+    <span class="sheet-reviewed-label">Zadnji put pregledano:</span>
+    <span class="sheet-reviewed-value" id="sheetReviewedValue">—</span>
+    <button class="sheet-review-now-btn" id="sheetReviewNowBtn" data-action="mark-reviewed-now">✓ Označi kao pregledano danas</button>
+  </div>
   <div class="sheet-answer" id="sheetAnswer">—</div>
   <div class="answer-edit-wrap" id="answerEditWrap">
     <div class="edit-toolbar">
@@ -717,7 +803,8 @@ let state = {
   progress: {},
   exam: { current: null, logged: false, seen: {}, stats: { passed: 0, failed: 0 } },
   customAnswers: {},
-  dayPlans: {}
+  dayPlans: {},
+  reviewLog: {}
 };
 const hasClaudeStorage = !!(window.storage && window.storage.get && window.storage.set);
 let hasLocalStorage = false;
@@ -780,7 +867,7 @@ function loadCardCollapseState(){
 
 function saveCardCollapseState(){
   if(!hasLocalStorage) return;
-  const ids = ['rqCard','examCard'].filter(id=>{
+  const ids = ['rqCard','examCard','srCard'].filter(id=>{
     const card = document.getElementById(id);
     return card && card.classList.contains('collapsed');
   });
@@ -914,6 +1001,7 @@ function applyLoadedState(parsed){
   state.exam.seen = state.exam.seen || {};
   state.customAnswers = parsed.customAnswers || {};
   state.dayPlans = parsed.dayPlans || {};
+  state.reviewLog = parsed.reviewLog || {};
 }
 
 async function loadState(){
@@ -942,6 +1030,7 @@ async function loadState(){
     render();
     renderExam();
     renderPlan();
+    renderSpacedRepetition();
     return;
   }
   if(hasClaudeStorage){
@@ -949,12 +1038,7 @@ async function loadState(){
       const res = await window.storage.get(STATE_KEY, false);
       if(res && res.value){
         const parsed = JSON.parse(res.value);
-        state.progress = parsed.progress || {};
-        state.exam = Object.assign({ current: null, logged: false, seen: {}, stats: { passed: 0, failed: 0 } }, parsed.exam || {});
-        state.exam.stats = Object.assign({ passed: 0, failed: 0 }, state.exam.stats || {});
-        state.exam.seen = state.exam.seen || {};
-        state.customAnswers = parsed.customAnswers || {};
-        state.dayPlans = parsed.dayPlans || {};
+        applyLoadedState(parsed);
       }
     }catch(e){
       // ključ još ne postoji — prva upotreba, ostaje prazno stanje
@@ -964,12 +1048,7 @@ async function loadState(){
       const raw = window.localStorage.getItem(STATE_KEY);
       if(raw){
         const parsed = JSON.parse(raw);
-        state.progress = parsed.progress || {};
-        state.exam = Object.assign({ current: null, logged: false, seen: {}, stats: { passed: 0, failed: 0 } }, parsed.exam || {});
-        state.exam.stats = Object.assign({ passed: 0, failed: 0 }, state.exam.stats || {});
-        state.exam.seen = state.exam.seen || {};
-        state.customAnswers = parsed.customAnswers || {};
-        state.dayPlans = parsed.dayPlans || {};
+        applyLoadedState(parsed);
       }
       setSaveNote('Napredak se čuva u ovom browseru na ovom uređaju.', false);
     }catch(e){
@@ -981,6 +1060,7 @@ async function loadState(){
   render();
   renderExam();
   renderPlan();
+  renderSpacedRepetition();
 }
 
 async function saveState(){
@@ -1082,6 +1162,7 @@ function importBackupFile(file){
       render();
       renderExam();
       renderPlan();
+      renderSpacedRepetition();
       setSaveNote('Backup učitan i sačuvan.', false);
     }catch(e){
       setSaveNote('Ovaj fajl ne izgleda kao ispravan backup.', true);
@@ -1105,15 +1186,45 @@ function statusOf(id){ return state.progress[id] || 'todo'; }
 function setStatus(id, status){
   if(status === 'todo') delete state.progress[id];
   else state.progress[id] = status;
+  markReviewed(id, false); // promjena statusa broji se kao pregled — ali ne diramo render/save dvaput
   saveState();
   render();
   if(typeof renderPlan === 'function') renderPlan();
+  if(typeof renderSpacedRepetition === 'function') renderSpacedRepetition();
 }
 
 function cycleStatus(id){
   const cur = statusOf(id);
   const next = cur === 'todo' ? 'review' : cur === 'review' ? 'mastered' : 'todo';
   setStatus(id, next);
+}
+
+// ---------- ZADNJI PUT PREGLEDANO (odvojeno od Plan za dan) ----------
+// state.reviewLog[id] = ISO datum-vrijeme (YYYY-MM-DD) kad je pitanje zadnji put "pregledano".
+// Ovo je nezavisno od statusa (naučeno/za ponoviti) i od plana za dan — to je čisti trag za spaced repetition.
+function lastReviewedOn(id){
+  return state.reviewLog[id] || null;
+}
+
+function daysSinceReview(id){
+  const last = lastReviewedOn(id);
+  if(!last) return Infinity; // nikad pregledano = uvijek "stalo"
+  const msPerDay = 24*60*60*1000;
+  const today = new Date(todayISO() + 'T00:00:00');
+  const then = new Date(last + 'T00:00:00');
+  return Math.round((today - then) / msPerDay);
+}
+
+// markReviewed(id, doRefresh=true): upiši današnji datum kao "zadnji put pregledano".
+// doRefresh=false se koristi kad poziva neka druga funkcija koja već sama radi save/render (npr. setStatus),
+// da se izbjegne duplo čuvanje/renderovanje u istom potezu.
+function markReviewed(id, doRefresh){
+  state.reviewLog[id] = todayISO();
+  if(doRefresh !== false){
+    saveState();
+    if(typeof renderSpacedRepetition === 'function') renderSpacedRepetition();
+    if(activeSheetId === id) updateSheetReviewedRow();
+  }
 }
 
 // ---------- PLAN ZA DAN ----------
@@ -1124,6 +1235,7 @@ function todayISO(){
 }
 
 let planSelectedDate = todayISO();
+let srThreshold = 5; // "stalo" pitanja = zadnji put pregledano prije ovoliko dana (ili nikad)
 
 function getPlanForDate(dateStr){
   return state.dayPlans[dateStr] || [];
@@ -1162,6 +1274,63 @@ function formatPlanDateLabel(dateStr){
   const days = ['nedjelja','ponedjeljak','utorak','srijeda','četvrtak','petak','subota'];
   const months = ['jan','feb','mar','apr','maj','jun','jul','avg','sep','okt','nov','dec'];
   return `${days[d.getDay()]}, ${d.getDate()}. ${months[d.getMonth()]}`;
+}
+
+// kratak, čitljiv opis "zadnji put pregledano" — koristi se u sheet-u i u kartici "Za obnovu"
+function formatReviewedLabel(id){
+  const last = lastReviewedOn(id);
+  if(!last) return 'nikad';
+  const n = daysSinceReview(id);
+  if(n === 0) return 'danas';
+  if(n === 1) return 'juče';
+  if(n < 30) return `prije ${n} dana`;
+  return formatPlanDateLabel(last).replace(/^\w+,\s*/, ''); // npr. "12. jul" bez naziva dana za starije datume
+}
+
+// ---------- SPACED REPETITION / "ZA OBNOVU" ----------
+// Vraća pitanja koja nisu pregledana >= srThreshold dana (ili nikad), najstarije prvo.
+// Namjerno ne filtrira po statusu — i "naučeno" pitanje može postati "stalo" ako je predugo bez ponavljanja.
+function getStaleQuestions(){
+  return Object.values(ALL_Q)
+    .map(q => ({ q, days: daysSinceReview(q.id) }))
+    .filter(x => x.days >= srThreshold)
+    .sort((a,b) => {
+      if(a.days === Infinity && b.days === Infinity) return a.q.id - b.q.id;
+      if(a.days === Infinity) return -1;
+      if(b.days === Infinity) return 1;
+      return b.days - a.days;
+    });
+}
+
+function renderSpacedRepetition(){
+  const listEl = document.getElementById('srList');
+  const countEl = document.getElementById('srCountText');
+  const addAllBtn = document.getElementById('srAddAllToPlanBtn');
+  if(!listEl) return;
+
+  const stale = getStaleQuestions();
+  countEl.textContent = `${stale.length} pitanj${stale.length===1?'e':(stale.length>=2&&stale.length<=4?'a':'a')} za obnovu`;
+  addAllBtn.disabled = stale.length === 0;
+
+  if(stale.length === 0){
+    listEl.innerHTML = '<p class="sr-empty">Nema stalih pitanja — sve je pregledano u zadnjih ' + (srThreshold-1) + ' dan(a). 🎉</p>';
+    return;
+  }
+
+  listEl.innerHTML = stale.map(({q, days})=>{
+    const st = statusOf(q.id);
+    const metaText = days === Infinity ? '<span class="sr-never">nikad pregledano</span>' : `prije ${days} dana`;
+    return `
+    <div class="sr-row rs-${st}">
+      <div class="sr-row-main">
+        <div class="sr-row-meta">${metaText}</div>
+        <button class="sr-row-text" data-action="open" data-id="${q.id}">
+          <span class="q-num">${q.num}.</span>${q.text}
+        </button>
+      </div>
+      <button class="sr-mark-btn" data-action="sr-mark-reviewed" data-id="${q.id}" title="Označi kao pregledano danas">✓ Pregledano</button>
+    </div>`;
+  }).join('');
 }
 
 function renderPlanAddOptions(){
@@ -1237,6 +1406,22 @@ function updateSheetPlanDates(){
     el.classList.remove('is-empty');
     const label = dates.length===1 ? 'U planu za:' : 'U planu za:';
     el.innerHTML = label + ' ' + dates.map(d=>`<span class="plan-date-chip">${formatPlanDateLabel(d)}</span>`).join('');
+  }
+}
+
+// "Zadnji put pregledano" red u sheet-u — potpuno odvojeno od "Plan za dan" reda iznad njega.
+function updateSheetReviewedRow(){
+  if(activeSheetId==null) return;
+  const valEl = document.getElementById('sheetReviewedValue');
+  const last = lastReviewedOn(activeSheetId);
+  valEl.classList.remove('is-empty','is-stale');
+  if(!last){
+    valEl.textContent = 'nikad pregledano';
+    valEl.classList.add('is-empty');
+  }else{
+    const n = daysSinceReview(activeSheetId);
+    valEl.textContent = `${formatReviewedLabel(activeSheetId)} (${formatPlanDateLabel(last)})`;
+    if(n >= srThreshold) valEl.classList.add('is-stale');
   }
 }
 
@@ -1528,6 +1713,7 @@ function openSheet(id){
   updateSheetStatusButtons();
   updateSheetPlanButton();
   updateSheetPlanDates();
+  updateSheetReviewedRow();
   document.getElementById('sheet').classList.add('open');
   document.getElementById('backdrop').classList.add('open');
 }
@@ -1595,6 +1781,13 @@ document.addEventListener('click', (e)=>{
     removeFromPlan(planSelectedDate, Number(t.dataset.id));
     renderPlan();
     if(activeSheetId === Number(t.dataset.id)){ updateSheetPlanButton(); updateSheetPlanDates(); }
+  }
+  else if(action === 'mark-reviewed-now'){
+    if(activeSheetId==null) return;
+    markReviewed(activeSheetId);
+  }
+  else if(action === 'sr-mark-reviewed'){
+    markReviewed(Number(t.dataset.id));
   }
   else if(action === 'toggle-section'){
     const key = t.dataset.key;
@@ -2081,6 +2274,7 @@ document.getElementById('confirmOk').addEventListener('click', ()=>{
   state.progress = {};
   saveState();
   render();
+  renderSpacedRepetition();
   closeSheets();
 });
 document.getElementById('backdrop').addEventListener('click', closeSheets);
@@ -2163,6 +2357,20 @@ document.getElementById('planClearBtn').addEventListener('click', ()=>{
     clearPlanForDate(planSelectedDate);
     renderPlan();
   }
+});
+
+document.getElementById('srThresholdSelect').addEventListener('change', (e)=>{
+  srThreshold = Number(e.target.value) || 5;
+  renderSpacedRepetition();
+  if(activeSheetId!=null) updateSheetReviewedRow();
+});
+document.getElementById('srAddAllToPlanBtn').addEventListener('click', ()=>{
+  const stale = getStaleQuestions();
+  if(stale.length===0) return;
+  const today = todayISO();
+  stale.forEach(({q})=> addToPlan(today, q.id));
+  if(planSelectedDate === today) renderPlan();
+  setSaveNote(`Dodano ${stale.length} pitanja u plan za danas.`, false);
 });
 
 loadState();
