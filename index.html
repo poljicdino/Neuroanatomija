@@ -994,14 +994,31 @@ function setSaveNote(text, isError){
   el.style.color = isError ? 'var(--rust)' : 'var(--ink-soft)';
 }
 
-function applyLoadedState(parsed){
+function applyLoadedState(parsed, opts){
+  opts = opts || {};
   state.progress = parsed.progress || {};
   state.exam = Object.assign({ current: null, logged: false, seen: {}, stats: { passed: 0, failed: 0 } }, parsed.exam || {});
   state.exam.stats = Object.assign({ passed: 0, failed: 0 }, state.exam.stats || {});
   state.exam.seen = state.exam.seen || {};
-  state.customAnswers = parsed.customAnswers || {};
+  // customAnswers (lične bilješke) se NE šalju/učitavaju sa clouda — ostaju samo lokalno
+  // na ovom uređaju, da bi se oslobodio prostor na besplatnom JSONBin planu (limit 100kb).
+  if(!opts.skipCustomAnswers){
+    state.customAnswers = parsed.customAnswers || {};
+  }
   state.dayPlans = parsed.dayPlans || {};
   state.reviewLog = parsed.reviewLog || {};
+}
+
+function loadLocalCustomAnswers(){
+  if(!hasLocalStorage) return {};
+  try{
+    const raw = window.localStorage.getItem(STATE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && parsed.customAnswers) return parsed.customAnswers;
+    }
+  }catch(e){}
+  return {};
 }
 
 async function loadState(){
@@ -1011,21 +1028,29 @@ async function loadState(){
       const resp = await fetch(`${JSONBIN_URL}/latest`, {
         headers: { 'X-Access-Key': JSONBIN_API_KEY }
       });
-      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      if(!resp.ok){
+        let bodyText = '';
+        try{ bodyText = await resp.text(); }catch(e3){}
+        throw new Error('HTTP ' + resp.status + (bodyText ? ' — ' + bodyText.slice(0,200) : ''));
+      }
       const data = await resp.json();
       if(data && data.record && Object.keys(data.record).length){
-        applyLoadedState(data.record);
+        applyLoadedState(data.record, { skipCustomAnswers: true });
       }
+      state.customAnswers = loadLocalCustomAnswers();
       setSaveNote('☁ Cloud sync aktivan — sinkovano na svim uređajima.', false);
     }catch(e){
       // ako cloud ne odgovori, radi lokalno kao rezerva dok se veza ne vrati
       if(hasLocalStorage){
         try{
           const raw = window.localStorage.getItem(STATE_KEY);
-          if(raw) applyLoadedState(JSON.parse(raw));
+          if(raw) applyLoadedState(JSON.parse(raw), { skipCustomAnswers: true });
         }catch(e2){}
       }
-      setSaveNote('Ne mogu da se povežem na cloud (provjeri internet) — koristim lokalnu kopiju.', true);
+      state.customAnswers = loadLocalCustomAnswers();
+      const detail = (e && e.message) ? e.message : String(e);
+      console.error('JSONBin load error:', e);
+      setSaveNote('Učitavanje sa cloud-a nije uspjelo — koristim lokalnu kopiju. Detalji: ' + detail, true);
     }
     render();
     renderExam();
@@ -1096,6 +1121,11 @@ async function pushToJsonBin(){
   if(jsonBinSaveInFlight){ jsonBinSavePending = true; return; }
   jsonBinSaveInFlight = true;
   try{
+    // customAnswers (lične bilješke) se namjerno izostavljaju iz cloud slanja —
+    // ostaju samo lokalno (localStorage), jer mogu narasti preko 100kb limita
+    // besplatnog JSONBin plana. Ostatak podataka je uvijek dovoljno mali.
+    const cloudPayload = Object.assign({}, state);
+    delete cloudPayload.customAnswers;
     const resp = await fetch(JSONBIN_URL, {
       method: 'PUT',
       headers: {
@@ -1103,12 +1133,24 @@ async function pushToJsonBin(){
         'X-Access-Key': JSONBIN_API_KEY,
         'X-Bin-Versioning': 'false'
       },
-      body: JSON.stringify(state)
+      body: JSON.stringify(cloudPayload)
     });
-    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    if(!resp.ok){
+      let bodyText = '';
+      try{ bodyText = await resp.text(); }catch(e3){}
+      throw new Error('HTTP ' + resp.status + (bodyText ? ' — ' + bodyText.slice(0,200) : ''));
+    }
     setSaveNote('☁ Sačuvano u cloud-u — vidjećeš isto na svim uređajima.', false);
   }catch(e){
-    setSaveNote('Čuvanje u cloud nije uspjelo (provjeri internet) — sačuvano samo lokalno za sad.', true);
+    const detail = (e && e.message) ? e.message : String(e);
+    const sizes = {};
+    try{
+      for(const k of Object.keys(cloudPayload)){
+        sizes[k] = JSON.stringify(cloudPayload[k]).length;
+      }
+    }catch(e4){}
+    console.error('JSONBin save error:', e, 'cloud payload size (bytes):', JSON.stringify(cloudPayload).length, 'breakdown by field:', sizes);
+    setSaveNote('Čuvanje u cloud nije uspjelo. Detalji: ' + detail, true);
   }finally{
     jsonBinSaveInFlight = false;
     if(jsonBinSavePending){
