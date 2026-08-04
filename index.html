@@ -193,6 +193,13 @@
   }
   .q-row.rs-mastered .q-text{color:var(--ink-soft);}
   .q-num{font-family:var(--font-mono);font-size:12.5px;color:var(--prussian-soft);margin-right:5px;}
+  .flag-badge{
+    flex-shrink:0;margin-top:2px;font-size:14px;line-height:1;background:none;border:none;
+    cursor:pointer;padding:2px;opacity:.28;filter:grayscale(1);transition:opacity .15s,filter .15s;
+  }
+  .flag-badge:hover{opacity:.6;filter:grayscale(.4);}
+  .flag-badge.is-flagged{opacity:1;filter:none;}
+  .q-row.is-flagged{background:color-mix(in srgb, var(--rust) 6%, transparent);}
 
   .empty-note{font-family:var(--font-body);font-size:13.5px;color:var(--ink-soft);padding:20px 4px;text-align:center;}
 
@@ -486,6 +493,13 @@
   }
   .plan-add-to-day-btn:hover{color:var(--prussian);}
   .plan-add-to-day-btn.in-plan{color:var(--mastered);}
+  .sheet-flag-btn{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.03em;color:var(--ink-soft);
+    background:none;border:none;cursor:pointer;padding:6px 2px;display:flex;align-items:center;gap:5px;
+    text-transform:uppercase;transition:color .15s;
+  }
+  .sheet-flag-btn:hover{color:var(--rust);}
+  .sheet-flag-btn.is-flagged{color:var(--rust);}
   .sheet-plan-dates{
     font-family:var(--font-mono);font-size:11.5px;color:var(--ink-soft);
     text-transform:uppercase;letter-spacing:.04em;
@@ -615,6 +629,7 @@
       <button class="chip" data-filter="review">Za ponoviti <span class="n" id="fcReview">0</span></button>
       <button class="chip" data-filter="mastered">Naučeno <span class="n" id="fcMastered">0</span></button>
       <button class="chip" data-filter="touched">🟢🟡 Obrađeno <span class="n" id="fcTouched">0</span></button>
+      <button class="chip" data-filter="flagged">🚩 Izdvojena <span class="n" id="fcFlagged">0</span></button>
     </div>
   </div>
 
@@ -733,6 +748,9 @@
     <button class="plan-add-to-day-btn" id="sheetPlanBtn" data-action="toggle-plan">
       <span id="sheetPlanLabel">+ Dodaj u plan za dan</span>
     </button>
+    <button class="sheet-flag-btn" id="sheetFlagBtn" data-action="toggle-flag-sheet">
+      🚩 <span id="sheetFlagLabel">Izdvoji pitanje</span>
+    </button>
     <button class="edit-link-btn" id="editToggleBtn" data-action="edit-toggle">
       <span class="dot"></span><span id="editToggleLabel">Uredi odgovor</span>
     </button>
@@ -804,7 +822,8 @@ let state = {
   exam: { current: null, logged: false, seen: {}, stats: { passed: 0, failed: 0 } },
   customAnswers: {},
   dayPlans: {},
-  reviewLog: {}
+  reviewLog: {},
+  flags: {}
 };
 const hasClaudeStorage = !!(window.storage && window.storage.get && window.storage.set);
 let hasLocalStorage = false;
@@ -1007,6 +1026,7 @@ function applyLoadedState(parsed, opts){
   }
   state.dayPlans = parsed.dayPlans || {};
   state.reviewLog = parsed.reviewLog || {};
+  state.flags = parsed.flags || {};
 }
 
 function loadLocalCustomAnswers(){
@@ -1239,6 +1259,23 @@ function cycleStatus(id){
   const cur = statusOf(id);
   const next = cur === 'todo' ? 'review' : cur === 'review' ? 'mastered' : 'todo';
   setStatus(id, next);
+}
+
+// ---------- IZDVOJENA PITANJA (crvena zastavica) ----------
+function isFlagged(id){ return !!state.flags[id]; }
+
+function setFlag(id, flagged){
+  if(flagged) state.flags[id] = true;
+  else delete state.flags[id];
+  saveState();
+  render();
+  if(typeof renderPlan === 'function') renderPlan();
+  if(typeof renderSpacedRepetition === 'function') renderSpacedRepetition();
+  if(activeSheetId === id) updateSheetFlagButton();
+}
+
+function toggleFlag(id){
+  setFlag(id, !isFlagged(id));
 }
 
 // ---------- ZADNJI PUT PREGLEDANO (odvojeno od Plan za dan) ----------
@@ -1608,6 +1645,7 @@ function renderHero(){
   document.getElementById('fcReview').textContent = review;
   document.getElementById('fcMastered').textContent = mastered;
   document.getElementById('fcTouched').textContent = mastered + review;
+  document.getElementById('fcFlagged').textContent = Object.keys(state.flags).length;
 
   // segmented myelin bar
   const segCount = 40;
@@ -1627,6 +1665,8 @@ function matchesFilter(q){
   const s = statusOf(q.id);
   if(currentFilter==='touched'){
     if(s!=='review' && s!=='mastered') return false;
+  }else if(currentFilter==='flagged'){
+    if(!isFlagged(q.id)) return false;
   }else if(currentFilter!=='all' && s!==currentFilter){
     return false;
   }
@@ -1665,12 +1705,14 @@ function renderSections(){
       <div class="plate-body">
         ${visibleQs.map(q=>{
           const st = statusOf(q.id);
+          const flagged = isFlagged(q.id);
           return `
-          <div class="q-row rs-${st}">
+          <div class="q-row rs-${st}${flagged ? ' is-flagged' : ''}">
             <button class="status-dot rs-${st}" data-action="cycle" data-id="${q.id}" aria-label="Promijeni status pitanja ${q.num}"></button>
             <button class="q-text" data-action="open" data-id="${q.id}">
               <span class="q-num">${q.num}.</span>${q.text}
             </button>
+            <button class="flag-badge${flagged ? ' is-flagged' : ''}" data-action="toggle-flag" data-id="${q.id}" aria-label="${flagged ? 'Ukloni iz izdvojenih' : 'Dodaj u izdvojena pitanja'}" title="${flagged ? 'Ukloni iz izdvojenih' : 'Izdvoji pitanje'}">🚩</button>
           </div>`;
         }).join('')}
       </div>
@@ -1756,8 +1798,18 @@ function openSheet(id){
   updateSheetPlanButton();
   updateSheetPlanDates();
   updateSheetReviewedRow();
+  updateSheetFlagButton();
   document.getElementById('sheet').classList.add('open');
   document.getElementById('backdrop').classList.add('open');
+}
+
+function updateSheetFlagButton(){
+  const btn = document.getElementById('sheetFlagBtn');
+  const label = document.getElementById('sheetFlagLabel');
+  if(!btn || activeSheetId==null) return;
+  const flagged = isFlagged(activeSheetId);
+  btn.classList.toggle('is-flagged', flagged);
+  label.textContent = flagged ? 'Izdvojeno' : 'Izdvoji pitanje';
 }
 
 function updateSheetStatusButtons(){
@@ -1798,6 +1850,11 @@ document.addEventListener('click', (e)=>{
   const action = t.dataset.action;
   if(action === 'cycle'){ cycleStatus(Number(t.dataset.id)); }
   else if(action === 'open'){ openSheet(Number(t.dataset.id)); }
+  else if(action === 'toggle-flag'){ toggleFlag(Number(t.dataset.id)); }
+  else if(action === 'toggle-flag-sheet'){
+    if(activeSheetId==null) return;
+    toggleFlag(activeSheetId);
+  }
   else if(action === 'rq-open'){ openSheet(Number(t.dataset.id)); }
   else if(action === 'toggle-card'){
     const card = document.getElementById(t.dataset.card);
